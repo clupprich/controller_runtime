@@ -12,6 +12,43 @@ If bundler is not being used to manage dependencies, install the gem by executin
 
 ## Usage
 
+You first need to publish the events you want to track. For example, if you want to track the time it takes to make a request to GitHub via the Octokit gem, you can create a custom client that publishes an event via `ActiveSupport::Notifications` when a request is made:
+
+```ruby
+# app/lib/octokit/instrumented_client.rb
+module Octokit
+  class InstrumentedClient
+    def initialize(**attrs)
+      @client = Client.new(**attrs)
+      end
+    end
+
+    def method_missing(method, *args)
+      if client.respond_to?(method)
+        ActiveSupport::Notifications.instrument("request.octokit", method: method) do
+          client.public_send(method, *args)
+        end
+      else
+        super
+      end
+    end
+  end
+end
+```
+
+Next, you need to setup `ControllerRuntime` to register to those events in an initializer, so they get tracked in your controller logs:
+
+```ruby
+# config/initializers/controller_runtime.rb
+ControllerRuntime.register(:octokit, label: "GitHub", event: "request.octokit")
+```
+
+Now you can use your custom client throughout your application and the time it takes to make a request will be tracked in your controller logs:
+
+```sh
+Completed 200 OK in 814ms (Views: 17.2ms | ActiveRecord: 0.0ms | GitHub: 734.1ms | Allocations: 191902)
+```
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
