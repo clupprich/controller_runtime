@@ -3,7 +3,7 @@ require "bundler/inline"
 gemfile(true) do
   source "https://rubygems.org"
 
-  gem "rails", ENV.fetch("RAILS_VERSION", "~> 7.1")
+  gem "rails", "~> #{ENV.fetch("RAILS_VERSION", "7.1")}"
   gem "controller_runtime", path: "../"
 end
 
@@ -39,11 +39,27 @@ end
 
 ControllerRuntime.register :example, label: "Example", event: "process.example"
 
-# require "rails/command"
-# require "rails/commands/server/server_command"
+require "minitest/autorun"
 
-# options = {
-#   app: TestApp,
-#   Host: '0.0.0.0'
-# }
-# Rails::Server.new(options).start
+class TestRailsfile < Minitest::Test
+  include Rack::Test::Methods
+
+  def setup
+    @io = StringIO.new
+    ActionController::Base.logger = ActiveSupport::Logger.new(@io)
+  end
+
+  def test_runtime_gets_included_in_completed_line
+    get "/books"
+
+    assert_match %r{Completed 200 OK in .* | Example: \d{3}.\d+ms |}, @io.string
+
+    assert last_response.ok?
+  end
+
+  private
+
+  def app
+    Rails.application
+  end
+end

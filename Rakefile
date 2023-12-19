@@ -11,4 +11,13 @@ end
 
 require "standard/rake"
 
-task default: %i[test standard]
+task default: %i[test test:railsfile standard]
+
+desc "Run the Railsfile"
+task "test:railsfile", [:rails_version] do |_t, args|
+  cmd = []
+  cmd << "RAILS_VERSION=#{args[:rails_version]}" unless args[:rails_version].to_s.empty?
+  cmd << "ruby test/railsfile.rb"
+
+  exit(1) unless Kernel.system(cmd.join(" "))
+end
