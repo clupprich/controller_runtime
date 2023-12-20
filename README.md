@@ -20,7 +20,6 @@ module Octokit
   class InstrumentedClient
     def initialize(**attrs)
       @client = Client.new(**attrs)
-      end
     end
 
     def method_missing(method, *args)
